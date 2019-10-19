@@ -21,7 +21,17 @@ e reinicia os respectivos numeradores sequenciais.
 
 A função ***collect_arcs()*** carrega os arcos (tabela ***physnet.arcs***) da rede a partir de layers geográficas de eixos indicadas na tabela *physnet.sources*.
 
-Em ***physnet.arcs*** é também indicada uma função custo para os arcos. Esta função, definida para cada caso, deve devolver dois arrays de valores de custo:
+Os arcos são direccionais, a sua direcção acompanha o sentido do desenho gráfico do arco.
+
+Cada arco representa uma linha geométrica, com dois ou mais vértices que ligará dois nós de rede. Os arcos são invariavelmente copiados de um tema geográfico de linhas, preferencialmente uma tabela PostGIS com geometria de tipo POLYLINE. O tipo MULTIPOLYLINE não deve ser usado porque permite uma linha dividida em componentes não necessariamente contíguos e sequenciais, dificultando a mais que certa necessidade de interpolar localizações sobre arcos com atribuição de custos.
+
+Neste momento não é filtrado o tipo de geometria.
+
+Cada registo de arco contém:
+
+- srcid: identificador da fonte >>>> WORK 20191019_2015 <<<<
+
+Em ***physnet.arcs*** é indicada uma função custo para os arcos. Esta função, definida para cada caso, deve devolver dois arrays de valores de custo:
 - o primeiro para custos de deslocação **directos** (na direcção do desenho da geometria)
 - o outro para os custos **reversos** (na direcção oposta ao desenho da geometria)
 
@@ -31,7 +41,17 @@ Um exempplo de função de custos é dado mais à frente no ponto *Exemplo de fu
 
 Neste passo vamos preencher a tabela **physnet.node***.
 
-Para cada ponto extremo de cada arco, é testada a proxiidade a outros pontos extemos de outros arcos. Se fôr encontrado algum outro ponto extremo dentro da tolerância (distância) indicada no parâmetro NODETOLERANCE, uma entrada nova é criada na referida tabela.
+Para cada ponto extremo de cada arco, é testada a proximidade a outros pontos extemos de outros arcos. Se fôr encontrado algum outro ponto extremo dentro da tolerância (distância) indicada no parâmetro NODETOLosANCE, uma entrada nova é criada na referida tabela.
+
+Como já referido, os arcos são direccionais, a sua direcção acompanha o sentido do desenho gráfico do arco.
+
+De acordo com este sentido, os arcos poderão dirigir-se para um nó ou partir de um nó. Por isso, a tabela dos nós tem três campos de tipo array de identificadores de arco (*arcid*):
+
+- **incoming_arcs**: para os arcos que se dirigem ao nó;
+- **outgoing_arcs**: para os arcos que partem do nó;
+- **all_arcs**: todos os arcos que tocam o nó.
+
+
 
 
 
