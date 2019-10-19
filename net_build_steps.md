@@ -29,7 +29,11 @@ Um exempplo de função de custos é dado mais à frente no ponto *Exemplo de fu
 
 ### Passo seguinte: inferir nós com *physnet.infer_nodes()*
 
-asdasd
+Neste passo vamos preencher a tabela **physnet.node***.
+
+Para cada ponto extremo de cada arco, é testada a proxiidade a outros pontos extemos de outros arcos. Se fôr encontrado algum outro ponto extremo dentro da tolerância (distância) indicada no parâmetro NODETOLERANCE, uma entrada nova é criada na referida tabela.
+
+
 
 ## Parâmetros da rede
 
