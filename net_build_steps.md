@@ -29,7 +29,15 @@ Neste momento não é filtrado o tipo de geometria.
 
 Cada registo de arco contém:
 
-- srcid: identificador da fonte >>>> WORK 20191019_2015 <<<<
+- **srcid**: identificador da layer fonte
+- **srcarcid**: identificador deste arco na fonte
+- **arcid**: identificador global do arco
+- **dircosts**: array de custos de deslocação na direcção de desenho do arco
+- **invcosts**: array de custos de deslocação na direcção contrária ao desenho do arco
+- **arcgeom**: geometria do arco
+- **fromnode**: geometria do nó inicial
+- **tonode**: geometria do nó final
+- **usable**: flag para remover este arco das restantes operações de construção da rede
 
 Em ***physnet.arcs*** é indicada uma função custo para os arcos. Esta função, definida para cada caso, deve devolver dois arrays de valores de custo:
 - o primeiro para custos de deslocação **directos** (na direcção do desenho da geometria)
@@ -41,18 +49,35 @@ Um exempplo de função de custos é dado mais à frente no ponto *Exemplo de fu
 
 Neste passo vamos preencher a tabela **physnet.node***.
 
-Para cada ponto extremo de cada arco, é testada a proximidade a outros pontos extemos de outros arcos. Se fôr encontrado algum outro ponto extremo dentro da tolerância (distância) indicada no parâmetro NODETOLosANCE, uma entrada nova é criada na referida tabela.
+Ao exceutar *physnet.infer_nodes()*, para cada ponto extremo de cada arco, é testada a proximidade a outros pontos extemos de outros arcos. Se fôr encontrado algum outro ponto extremo dentro da tolerância (distância) indicada no parâmetro NODETOLERANCE, uma entrada nova é criada na referida tabela.
 
 Como já referido, os arcos são direccionais, a sua direcção acompanha o sentido do desenho gráfico do arco.
 
 De acordo com este sentido, os arcos poderão dirigir-se para um nó ou partir de um nó. Por isso, a tabela dos nós tem três campos de tipo array de identificadores de arco (*arcid*):
 
+- **nodeid**: número de série identificador do nó;
 - **incoming_arcs**: para os arcos que se dirigem ao nó;
 - **outgoing_arcs**: para os arcos que partem do nó;
 - **all_arcs**: todos os arcos que tocam o nó.
 
+### Terceira etapa: validar os nós inferidos, com *physnet.validate_nodes()*
+
+Após inferir os nós, deverá ser verificado se cada arco liga apenas dois nós. Um arco poderá ligar um nó consigo próprio se constituir um *cul-de-sac*.
+
+Esta função lista os erros encontrados, a lista vazia indica uma rede ser erros.
+
+### Sequência das operações
+
+1. resetnet() (se necessário)
+1. collect_arcs()
+1. infer_nodes()
+1. validate_nodes()
 
 
+    select physnet.resetnet();
+    select * from physnet.collect_arcs();
+    select physnet.infer_nodes();
+    select physnet.validate_nodes();
 
 
 ## Parâmetros da rede
