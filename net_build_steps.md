@@ -76,6 +76,7 @@ Esta função lista os erros encontrados, a lista vazia indica uma rede ser erro
 
     select physnet.resetnet();
     select * from physnet.collect_arcs();
+    .........
     select physnet.infer_nodes();
     select physnet.validate_nodes();
 
