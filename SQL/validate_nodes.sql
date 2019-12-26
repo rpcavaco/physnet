@@ -1,8 +1,5 @@
--- FUNCTION: physnet.validate_nodes()
 
--- DROP FUNCTION physnet.validate_nodes();
-
-CREATE OR REPLACE FUNCTION physnet.validate_nodes(
+CREATE OR REPLACE FUNCTION validate_nodes(
 	)
     RETURNS TABLE(out_arcid integer, out_nodecount integer)
     LANGUAGE 'plpgsql'
@@ -15,11 +12,11 @@ DECLARE
 	v_rec2 record;
 BEGIN
 	for v_rec in (select arcid
-		from physnet.arc)
+		from arc)
 	loop
 
 		for v_rec2 in (
-			select count(*) cnt from physnet.node
+			select count(*) cnt from node
 			where all_arcs @> ARRAY[v_rec.arcid]
 
 			--v_rec.arcid = any(all_arcs)
@@ -33,7 +30,7 @@ BEGIN
 				out_nodecount := v_rec2.cnt;
 
 				if v_rec2.cnt = 0 then
-					update physnet.arc
+					update arc
 					set usable = false
 					where arcid = out_arcid;
 				end if;
@@ -49,5 +46,5 @@ BEGIN
 eND;
 $BODY$;
 
-ALTER FUNCTION physnet.validate_nodes()
-    OWNER TO itinerarium;
+ALTER FUNCTION validate_nodes()
+    OWNER TO ......;

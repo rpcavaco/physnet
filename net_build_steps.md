@@ -1,7 +1,7 @@
 
 # Rede Física
 
-Schema de base de dados ***physnet***
+Todas as operações descritas e respectivos dados deverão ser guardados num schema de base de dados próprio. A título de exemplo o nome de schema usado neste documento será ***physnet***
 
 ## Sequência para criação de Rede
 
@@ -9,17 +9,17 @@ Passos para criar e pre-processar uma rede e respectivos procedures de PG/PLSQL
 
 ### Esvaziamento da estrutura previamente carregada
 
-Caso a estrutura de dados contenha já uma outra rede, diferente da que pretendemos carregar, ou com uma versão anterior de dados da mesma rede, devemos proceder ao seu esvaziamento com a função ***physnet.resetnet()***. Esta função esvazia as tabelas
+Caso a estrutura de dados contenha já uma outra rede, diferente da que pretendemos carregar, ou com uma versão anterior de dados da mesma rede, devemos proceder ao seu esvaziamento com a função ***resetnet()***. Esta função esvazia as tabelas
 
-- physnet.arc
-- physnet.node
+- arc
+- node
 
 e reinicia os respectivos numeradores sequenciais.
 
 
 ### Carregamento de arcos com *collect_arcs()*
 
-A função ***collect_arcs()*** carrega os arcos (tabela ***physnet.arcs***) da rede a partir de layers geográficas de eixos indicadas na tabela *physnet.sources*.
+A função ***collect_arcs()*** carrega os arcos (tabela ***arc***) da rede a partir de layers geográficas de eixos indicadas na tabela *sources*.
 
 Os arcos são direccionais, a sua direcção acompanha o sentido do desenho gráfico do arco.
 
@@ -39,17 +39,19 @@ Cada registo de arco contém:
 - **tonode**: geometria do nó final
 - **usable**: flag para remover este arco das restantes operações de construção da rede
 
-Em ***physnet.arcs*** é indicada uma função custo para os arcos. Esta função, definida para cada caso, deve devolver dois arrays de valores de custo:
+Em ***arc*** é indicada uma função custo para os arcos. Esta função, definida para cada caso, deve devolver dois arrays de valores de custo:
 - o primeiro para custos de deslocação **directos** (na direcção do desenho da geometria)
 - o outro para os custos **reversos** (na direcção oposta ao desenho da geometria)
 
 Um exemplo de função de custos é dado mais à frente no ponto *Exemplo de função de custos*.
 
-### Passo seguinte: inferir nós com *physnet.infer_nodes()*
+Esta função retorna uma estatística dos arcos usáveis e não-usáveis. Um arco será usável se o seu comprimento for maior ou igual ao valor de NODETOLERANCE, parâmetro de rede a indicar na tabela **params** (ver ponto *Parâmetros da rede* mais à frente).
 
-Neste passo vamos preencher a tabela **physnet.node***.
+### Passo seguinte: inferir nós com *infer_nodes()*
 
-Ao exceutar *physnet.infer_nodes()*, para cada ponto extremo de cada arco, é testada a proximidade a outros pontos extemos de outros arcos. Se fôr encontrado algum outro ponto extremo dentro da tolerância (distância) indicada no parâmetro NODETOLERANCE, uma entrada nova é criada na referida tabela.
+Neste passo vamos preencher a tabela **node***.
+
+Ao exceutar *infer_nodes()*, para cada ponto extremo de cada arco, é testada a proximidade a outros pontos extemos de outros arcos. Se for encontrado algum outro ponto extremo dentro da tolerância (distância) indicada no parâmetro NODETOLERANCE, uma entrada nova é criada na referida tabela.
 
 Como já referido, os arcos são direccionais, a sua direcção acompanha o sentido do desenho gráfico do arco.
 
@@ -60,30 +62,55 @@ De acordo com este sentido, os arcos poderão dirigir-se para um nó ou partir d
 - **outgoing_arcs**: para os arcos que partem do nó;
 - **all_arcs**: todos os arcos que tocam o nó.
 
-### Terceira etapa: validar os nós inferidos, com *physnet.validate_nodes()*
+### Terceira etapa: validar os nós inferidos, com *validate_nodes()*
 
-Após inferir os nós, deverá ser verificado se cada arco liga apenas dois nós. Um arco poderá ligar um nó consigo próprio se constituir um *cul-de-sac*.
+Após inferir os nós, deverá ser verificado se cada arco liga apenas com um ou dois nós. Um arco poderá ligar um nó consigo próprio (auto-relação) se se tratar do arco final de um *cul-de-sac* ou beco-sem-saída.
 
 Esta função lista os erros encontrados, a **lista vazia** indica uma rede **sem erros**.
 
+### Construção da adjacência de nós de rede com *build_adjacency()*
+
+Apesar da topologia de arcos, reunida na tabela **arcs**, ser constituída por arcos **orientados** (permitindo registar e manter a orientação gráfica, factor importante na modelação de redes seguida por software como, por exemplo, *Visum*), a topologia de nós será bidirecional permitindo que o algoritmo de caminho mais curto usado possa decidir não seguir por um certo arco numa determinada direcção com base apenas nos custos de deslocação retornados pela função custo em uso.
+
+As relações de nós consigo próprios (auto-relação em becos-sem-saída ou cul-de-sac) são permitidos.
+
+Assim cada par de nós diferentes, ou iguais no caso da auto-relação, terá obrigatoriamente que ter duas entradas na tabela de adjacência de nós **node_adjacency**.
+
+
+Esta condição do parágrafo anterior pode ser validada consultando o resultado de *build_adjacency()*: essa condição das duas entradas por arco é verdadeira se *out_min_nodeforarc_count* for igual a *out_min_nodeforarc_count* e ambos iguais ao número dois (resultado de *build_adjacency()* na imagem abaixo).
+
+![build_adjacency](out_build_adjacency.png "Resultado de build_adjacency()")
+
 ### Sequência das operações
+
+Construção inicial de arcos e nós de rede:
 
 1. resetnet() (se necessário)
 1. collect_arcs() (imediato)
 1. infer_nodes()  (49 segundos)
-1. validate_nodes()
+1. validate_nodes() (imediato)
+
+Se a validação de nós não retornar nenhum caso a corrigir, segue-se a construção da adjacência:
+
+5. build_adjacency() (5 segundos)
 
 
-    select physnet.resetnet();
-    select * from physnet.collect_arcs();
-    .........
-    select physnet.infer_nodes();
-    select physnet.validate_nodes();
+    -- configurar search_path para o schema usado ('physnet' neste exemplo)
+    SELECT set_config('search_path', '$user", physnet, public', false);
+
+    select resetnet();
+    select * from collect_arcs();
+    -- retorna estatística dos arcos usáveis e não-usáveis
+    select infer_nodes();
+    select * from validate_nodes();
+    -- (deverá retornar zero registos)
+
+
 
 
 ## Parâmetros da rede
 
-Estes parâmetros são guardados na tabela ***physnet.params***.
+Estes parâmetros são guardados na tabela ***params***.
 
 | Parâmetro | Tipo | Descrição |
 |-----------|------|-------|
@@ -92,12 +119,10 @@ Estes parâmetros são guardados na tabela ***physnet.params***.
 
 ## Exemplo de função de custos
 
-O único exemplo duma função deste tipo, existente neste momento é ***physnet.usr_rede_viaria_cost***.
+O único exemplo duma função deste tipo, existente neste momento é ***usr_rede_viaria_cost***.
 
 O array de custos devolvido por esta função contém valores para dois tipos de custo de deslocação, por esta ordem:
 - custo pedonal
 - custo rodoviário
 
 Para determinação do custo de deslocação pedonal, tomamos como referência o valor indicado no parâmetro de rede WALKVEL_MPS (ver o ponto *Parâmetros da rede*).
-
-### Construção da adjacência de nós de rede com *build_adjacency()*

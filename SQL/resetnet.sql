@@ -1,28 +1,24 @@
--- FUNCTION: physnet.resetnet()
-
--- DROP FUNCTION physnet.resetnet();
-
-CREATE OR REPLACE FUNCTION physnet.resetnet(
+CREATE OR REPLACE FUNCTION resetnet(
 	)
     RETURNS void
     LANGUAGE 'plpgsql'
-
-    COST 100
     VOLATILE
 AS $BODY$
 
 BEGIN
 
-	ALTER SEQUENCE physnet.arc_arcid_seq RESTART WITH 1;
+	ALTER SEQUENCE arc_arcid_seq RESTART WITH 1;
 
-	delete from physnet.arc;
+	delete from arc;
 
-	ALTER SEQUENCE physnet.node_nodeid_seq RESTART WITH 1;
+	ALTER SEQUENCE node_nodeid_seq RESTART WITH 1;
 
-	delete from physnet.node;
+	delete from node;
+
+	delete from node_adjacency;
 
 END;
 $BODY$;
 
-ALTER FUNCTION physnet.resetnet()
-    OWNER TO itinerarium;
+ALTER FUNCTION resetnet()
+    OWNER TO <your owner>;

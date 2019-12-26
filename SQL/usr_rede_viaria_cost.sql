@@ -1,8 +1,5 @@
--- FUNCTION: physnet.usr_rede_viaria_cost(integer)
 
--- DROP FUNCTION physnet.usr_rede_viaria_cost(integer);
-
-CREATE OR REPLACE FUNCTION physnet.usr_rede_viaria_cost(
+CREATE OR REPLACE FUNCTION usr_rede_viaria_cost(
 	p_oid integer)
     RETURNS TABLE(o_dircosts numeric[], o_invcosts numeric[])
     LANGUAGE 'plpgsql'
@@ -17,7 +14,7 @@ DECLARE
 BEGIN
 	select numericval
 	into v_wvel
-	from physnet.params
+	from params
 	where acronym = 'WALKVEL_MPS';
 
 	-- Array de custos devolvido contém valores para dois tipos de custo de deslocação, por esta ordem:
@@ -50,5 +47,5 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION physnet.usr_rede_viaria_cost(integer)
-    OWNER TO itinerarium;
+ALTER FUNCTION usr_rede_viaria_cost(integer)
+    OWNER TO ...;

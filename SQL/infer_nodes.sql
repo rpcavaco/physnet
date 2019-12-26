@@ -1,6 +1,3 @@
--- FUNCTION: physnet.infer_nodes()
-
--- DROP FUNCTION physnet.infer_nodes();
 
 CREATE OR REPLACE FUNCTION physnet.infer_nodes(
 	)
@@ -22,11 +19,11 @@ DECLARE
 BEGIN
 	select numericval
 	into v_nodetol
-	from physnet.params
+	from params
 	where acronym = 'NODETOLERANCE';
 
 	for v_rec in (select fromnode, tonode
-		from physnet.arc)
+		from arc)
 	loop
 		v_nodes := ARRAY[v_rec.fromnode, v_rec.tonode];
 
@@ -34,14 +31,14 @@ BEGIN
 		loop
 
 			with ps as (select arcid
-			from physnet.arc
+			from arc
 			where usable and ST_DWithin(fromnode,v_rec2.gnode,v_nodetol))
 			select array_agg(arcid)
 			into v_outarcs
 			from ps;
 
 			with ps1 as (select arcid
-			from physnet.arc
+			from arc
 			where usable and ST_DWithin(tonode,v_rec2.gnode,v_nodetol))
 			select array_agg(arcid)
 			into v_inarcs
@@ -56,10 +53,10 @@ BEGIN
 			into v_allarcs;
 
 			BEGIN
-				select nextval('physnet.node_nodeid_seq'::regclass)
+				select nextval('node_nodeid_seq'::regclass)
 				into v_nodeid;
 
-				insert into physnet.node
+				insert into node
 				(nodeid, all_arcs, incoming_arcs, outgoing_arcs)
 				values (v_nodeid, v_allarcs, v_inarcs, v_outarcs);
 			EXCEPTION WHEN unique_violation THEN
@@ -73,4 +70,4 @@ END;
 $BODY$;
 
 ALTER FUNCTION physnet.infer_nodes()
-    OWNER TO itinerarium;
+    OWNER TO ....;
