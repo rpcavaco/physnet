@@ -43,7 +43,7 @@ Em ***physnet.arcs*** é indicada uma função custo para os arcos. Esta funçã
 - o primeiro para custos de deslocação **directos** (na direcção do desenho da geometria)
 - o outro para os custos **reversos** (na direcção oposta ao desenho da geometria)
 
-Um exempplo de função de custos é dado mais à frente no ponto *Exemplo de função de custos*.
+Um exemplo de função de custos é dado mais à frente no ponto *Exemplo de função de custos*.
 
 ### Passo seguinte: inferir nós com *physnet.infer_nodes()*
 
@@ -64,13 +64,13 @@ De acordo com este sentido, os arcos poderão dirigir-se para um nó ou partir d
 
 Após inferir os nós, deverá ser verificado se cada arco liga apenas dois nós. Um arco poderá ligar um nó consigo próprio se constituir um *cul-de-sac*.
 
-Esta função lista os erros encontrados, a lista vazia indica uma rede ser erros.
+Esta função lista os erros encontrados, a **lista vazia** indica uma rede **sem erros**.
 
 ### Sequência das operações
 
 1. resetnet() (se necessário)
-1. collect_arcs()
-1. infer_nodes()
+1. collect_arcs() (imediato)
+1. infer_nodes()  (49 segundos)
 1. validate_nodes()
 
 
@@ -99,3 +99,5 @@ O array de custos devolvido por esta função contém valores para dois tipos de
 - custo rodoviário
 
 Para determinação do custo de deslocação pedonal, tomamos como referência o valor indicado no parâmetro de rede WALKVEL_MPS (ver o ponto *Parâmetros da rede*).
+
+### Construção da adjacência de nós de rede com *build_adjacency()*
