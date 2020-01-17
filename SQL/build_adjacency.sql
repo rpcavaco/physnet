@@ -1,16 +1,21 @@
-CREATE OR REPLACE FUNCTION physnet.build_adjacency(
-	)
+--SELECT set_config('search_path', '$user", physnet_staging, public', false);
+
+
+CREATE OR REPLACE FUNCTION build_adjacency()
     RETURNS TABLE(out_min_nodeforarc_count integer, out_max_nodeforarc_count integer)
     LANGUAGE 'plpgsql'
+
+    COST 100
     VOLATILE
+    ROWS 1000
 AS $BODY$
 DECLARE
 	v_fnode integer;
 	v_tnode integer;
 	v_rec record;
-	c_arcs NO SCROLL CURSOR FOR select arcid
+	c_arcs NO SCROLL CURSOR FOR select arcid, bidir_adjacency as bda
 		from arc
-		where usable;
+		where not rejected;
 	v_cnt integer;
 BEGIN
 
@@ -36,10 +41,12 @@ BEGIN
 		VALUES
 		(v_fnode, v_tnode, v_rec.arcid, true);
 
-		INSERT INTO node_adjacency
-		(fromnode, tonode, arc, arcdirect)
-		VALUES
-		(v_tnode, v_fnode, v_rec.arcid, false);
+		if v_rec.bda then
+				INSERT INTO node_adjacency
+				(fromnode, tonode, arc, arcdirect)
+				VALUES
+				(v_tnode, v_fnode, v_rec.arcid, false);
+		end if;
 
 	end loop;
 
@@ -55,5 +62,5 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION physnet.build_adjacency()
-    OWNER TO ....;
+ALTER FUNCTION build_adjacency()
+    OWNER TO ...;

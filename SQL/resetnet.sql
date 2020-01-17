@@ -1,13 +1,21 @@
-CREATE OR REPLACE FUNCTION resetnet(
+-- FUNCTION: physnet.resetnet()
+
+-- DROP FUNCTION physnet.resetnet();
+
+CREATE OR REPLACE FUNCTION physnet.resetnet(
 	)
     RETURNS void
     LANGUAGE 'plpgsql'
+
+    COST 100
     VOLATILE
 AS $BODY$
 
 BEGIN
 
 	ALTER SEQUENCE arc_arcid_seq RESTART WITH 1;
+
+	delete from arcspeed;
 
 	delete from arc;
 
@@ -20,5 +28,5 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION resetnet()
-    OWNER TO <your owner>;
+ALTER FUNCTION physnet.resetnet()
+    OWNER TO ...;

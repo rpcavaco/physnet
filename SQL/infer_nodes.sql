@@ -1,5 +1,7 @@
 
-CREATE OR REPLACE FUNCTION physnet.infer_nodes(
+-- SELECT set_config('search_path', '$user", physnet_staging, public', false);
+
+CREATE OR REPLACE FUNCTION infer_nodes(
 	)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -15,31 +17,34 @@ DECLARE
 	v_outarcs integer[];
 	v_inarcs integer[];
 	v_allarcs integer[];
-	v_nodes geometry[];
 BEGIN
 	select numericval
 	into v_nodetol
 	from params
 	where acronym = 'NODETOLERANCE';
 
-	for v_rec in (select fromnode, tonode
-		from arc)
-	loop
-		v_nodes := ARRAY[v_rec.fromnode, v_rec.tonode];
+	delete from node;
 
-		for v_rec2 in (select unnest(v_nodes) gnode)
+	ALTER SEQUENCE node_nodeid_seq RESTART WITH 1;
+
+	for v_rec in (
+		select ARRAY[fromnode, tonode] as nodes
+		from arc where not rejected
+	)
+	loop
+		for v_rec2 in (select unnest(v_rec.nodes) gnode)
 		loop
 
 			with ps as (select arcid
 			from arc
-			where usable and ST_DWithin(fromnode,v_rec2.gnode,v_nodetol))
+			where not rejected and ST_DWithin(fromnode,v_rec2.gnode,v_nodetol))
 			select array_agg(arcid)
 			into v_outarcs
 			from ps;
 
 			with ps1 as (select arcid
 			from arc
-			where usable and ST_DWithin(tonode,v_rec2.gnode,v_nodetol))
+			where not rejected and ST_DWithin(tonode,v_rec2.gnode,v_nodetol))
 			select array_agg(arcid)
 			into v_inarcs
 			from ps1;
@@ -53,12 +58,11 @@ BEGIN
 			into v_allarcs;
 
 			BEGIN
-				select nextval('node_nodeid_seq'::regclass)
-				into v_nodeid;
-
 				insert into node
-				(nodeid, all_arcs, incoming_arcs, outgoing_arcs)
-				values (v_nodeid, v_allarcs, v_inarcs, v_outarcs);
+				(nodeid, all_arcs, incoming_arcs, outgoing_arcs, ispseudo)
+				select nextval('node_nodeid_seq'::regclass),
+					v_allarcs, v_inarcs, v_outarcs,
+					(array_length(v_allarcs, 1) = 2);
 			EXCEPTION WHEN unique_violation THEN
 				continue;
 			END;
@@ -69,5 +73,5 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION physnet.infer_nodes()
-    OWNER TO ....;
+ALTER FUNCTION infer_nodes()
+    OWNER TO ...;
