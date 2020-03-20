@@ -1,12 +1,7 @@
---SELECT set_config('search_path', '$user", physnet_staging, public', false);
-
-CREATE OR REPLACE FUNCTION collect_arcs(p_limit_src int[])
+CREATE OR REPLACE FUNCTION collect_arcs(
+	p_limit_src integer[])
     RETURNS TABLE(param text, val integer)
     LANGUAGE 'plpgsql'
-
-    COST 100
-    VOLATILE
-    ROWS 1000
 AS $BODY$
 DECLARE
 	v_rec record;
@@ -72,18 +67,27 @@ BEGIN
 	end loop;
 
 	update arc
-	set rejected = false
-	where st_length(arcgeom) >= v_nodetol;
+	set reject_motive = 'TOOSHORT'
+	where st_length(arcgeom) <= v_nodetol;
 
 	update arc
-	set rejected = true,
-	reject_motive = 'TOOSHORT'
-	where st_length(arcgeom) < v_nodetol;
+	set culdesac = true
+	where
+	  reject_motive is null
+	  and arcid in
+	(
+		select arcid
+		from (
+			select arcid, ST_Distance(fromnode, tonode) dist
+			from arc
+		) a
+		where dist <= v_nodetol
+	);
 
 	select count(*)
 	into val
 	from arc
-	where not rejected;
+	where reject_motive is null;
 
 	param := 'not_rejected';
 	return next;
@@ -91,7 +95,7 @@ BEGIN
 	select count(*)
 	into val
 	from arc
-	where rejected;
+	where not reject_motive is null;
 
 	param := 'rejected';
 	return next;

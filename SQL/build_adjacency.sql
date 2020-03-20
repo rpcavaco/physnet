@@ -1,13 +1,8 @@
---SELECT set_config('search_path', '$user", physnet_staging, public', false);
 
-
-CREATE OR REPLACE FUNCTION build_adjacency()
+CREATE OR REPLACE FUNCTION build_adjacency(
+	)
     RETURNS TABLE(out_min_nodeforarc_count integer, out_max_nodeforarc_count integer)
     LANGUAGE 'plpgsql'
-
-    COST 100
-    VOLATILE
-    ROWS 1000
 AS $BODY$
 DECLARE
 	v_fnode integer;
@@ -15,7 +10,7 @@ DECLARE
 	v_rec record;
 	c_arcs NO SCROLL CURSOR FOR select arcid, bidir_adjacency as bda
 		from arc
-		where not rejected;
+		where reject_motive is null;
 	v_cnt integer;
 BEGIN
 
@@ -37,22 +32,22 @@ BEGIN
 		INTO v_tnode;
 
 		INSERT INTO node_adjacency
-		(fromnode, tonode, arc, arcdirect)
+		(fromnode, tonode, arcid, arcdirect)
 		VALUES
 		(v_fnode, v_tnode, v_rec.arcid, true);
 
 		if v_rec.bda then
 				INSERT INTO node_adjacency
-				(fromnode, tonode, arc, arcdirect)
+				(fromnode, tonode, arcid, arcdirect)
 				VALUES
 				(v_tnode, v_fnode, v_rec.arcid, false);
 		end if;
 
 	end loop;
 
-	with ps as (select arc, count(*) cnt
+	with ps as (select arcid, count(*) cnt
 	from node_adjacency
-	group by arc)
+	group by arcid)
 	select min(cnt), max(cnt)
 	into out_min_nodeforarc_count, out_max_nodeforarc_count
 	from ps;

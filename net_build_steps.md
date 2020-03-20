@@ -70,7 +70,9 @@ Esta função lista os erros encontrados, a **lista vazia** indica uma rede **se
 
 ### Construção da adjacência de nós de rede com *build_adjacency()*
 
-Apesar da topologia de arcos, reunida na tabela **arcs**, ser constituída por arcos **orientados** (permitindo registar e manter a orientação gráfica, factor importante na modelação de redes seguida por software como, por exemplo, *Visum*), a topologia de nós será bidirecional permitindo que o algoritmo de caminho mais curto usado possa decidir não seguir por um certo arco numa determinada direcção com base apenas nos custos de deslocação retornados pela função custo em uso.
+Apesar da topologia de arcos, reunida na tabela **arcs**, ser constituída por arcos **orientados** (permitindo registar e manter a orientação gráfica, factor importante na modelação de redes seguida por software como, por exemplo, *Visum*), a topologia de nós poderá ser bidirecional permitindo que o algoritmo de caminho mais curto usado possa decidir não seguir por um certo arco numa determinada direcção com base apenas nos custos de deslocação retornados pela função custo em uso.
+
+A bidirecionalidade da adjacência a criar é controlada pelo parâmetro booleano *p_dontduplicate* de *build_adjacency()*: se for verdadeiro, a adjacência replicará integralmente o sentido de desenho dos arcos colectados nos dados de partida; se for falso, por cada arco colectado serão definidas adjacências no sentido de desenho do arco e no seu inverso.
 
 As relações de nós consigo próprios (auto-relação em becos-sem-saída ou cul-de-sac) são permitidos.
 
@@ -83,30 +85,64 @@ Esta condição do parágrafo anterior pode ser validada consultando o resultado
 
 ### Sequência das operações
 
+!!!!!!!!!!
+
+campo node_adjacency passou de arc para v_arcid
+
+Validar número de velcidades nos parÂmetros (SPEEDS) com as devolvidas pelas funcções usadas na construção da tabela respectiva
+
+node arc replacement deve ter foreign key para o código de arco
+
+necessário controle: arcco unidireccional não pode ter duas adjacências (constraint ?)
+
+Marcar estado
+Consoante o estado, criar lista de tarefas a executar para ter a rede pronta a responde
+
+Schemas de staging e produção
+
+Substituição de uma fonte arcos / layer
+
+Exportação dos arcos de uma fonte
+
+Áreas sujas - substituição parcial de alguns arcos
+
+
+
+!!!!!!!!!!!
+
 Construção inicial de arcos e nós de rede:
 
 1. resetnet() (se necessário)
-1. collect_arcs() (imediato)
-1. infer_nodes()  (49 segundos)
-1. validate_nodes() (imediato)
+1. collect_arcs() (5 segundos)
+1. infer_nodes()  (52 segundos)
+1. validate_nodes() (de imediato a 21 sec -- deve depender se a indexação de alguns campos já terminou)
 
 Se a validação de nós não retornar nenhum caso a corrigir, segue-se a construção da adjacência:
 
-5. build_adjacency() (5 segundos)
+5. build_adjacency() (22 segundos)
+6. remove_pseudo_nodes()
 
 
     -- configurar search_path para o schema usado ('physnet' neste exemplo)
-    SELECT set_config('search_path', '$user", physnet, public', false);
+    SELECT set_config('search_path', '$user", physnet_staging, public', false);
 
     select resetnet();
-    select * from collect_arcs();
+    select * from collect_arcs(null);
     -- retorna estatística dos arcos usáveis e não-usáveis
     select infer_nodes();
+	-- reindex node_allarc_ix
     select * from validate_nodes();
     -- (deverá retornar zero registos)
+	-- reindex node_ougarc_ix e node_incarc_ix
+    select * from build_adjacency()
+
+    select * from remove_pseudo_nodes(null)
 
 
+    .....
 
+    Os passos anteriores deverão ocorrer numa única transacção em modo SERIALIZADO,
+    evitando o acesso simulataneo por várias connections?
 
 ## Parâmetros da rede
 
@@ -114,8 +150,15 @@ Estes parâmetros são guardados na tabela ***params***.
 
 | Parâmetro | Tipo | Descrição |
 |-----------|------|-------|
+|SPEEDS| numérico | Número de velocidades a calcular para arco |
 |WALKVEL_MPS| numérico | Velocidade de deslocação pedonal m/s |
 |NODETOLERANCE | numérico | Tolerância nós - distância máxima admissível entre dois pontos extremos de arcos para que qualquer um deles possa ser tomado como possível localização de um nó de rede |
+
+## Funções adicionais
+
+### *stats*()
+
+Gera uma tabela de estatísticas da rede.
 
 ## Exemplo de função de custos
 
@@ -126,3 +169,8 @@ O array de custos devolvido por esta função contém valores para dois tipos de
 - custo rodoviário
 
 Para determinação do custo de deslocação pedonal, tomamos como referência o valor indicado no parâmetro de rede WALKVEL_MPS (ver o ponto *Parâmetros da rede*).
+
+
+## Testes
+
+Qualquer alteração a código deve-se correr as funções de teste ......
